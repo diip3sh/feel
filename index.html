@@ -4,77 +4,205 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Feel · interactions built on physics</title>
-<meta name="description" content="A Claude Code skill and runtime: describe how an interaction should feel, get a component driven by mass, stiffness and damping, plus a test rig. No hand-picked durations.">
+<meta name="description" content="A skill for coding agents: describe how an interaction should feel, get a component driven by mass, stiffness and damping, plus a test rig. No hand-picked durations.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap">
 <link rel="stylesheet" href="runtime/feel.css">
 <style>
-  html, body { margin: 0; background: #0b0b0c; color: #ececea; font: 15px/1.6 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-  main { max-width: 1240px; margin: 0 auto; padding: 64px 32px 120px; }
-  header { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; flex-wrap: wrap; margin-bottom: 18px; }
-  header h1 { margin: 0; font-size: 15px; font-weight: 600; }
-  header h1 span { color: #7c7b78; font-weight: 400; }
-  header nav { display: flex; gap: 18px; font: 12px/1 ui-monospace, Menlo, monospace; }
-  header a { color: #ececea; text-decoration: none; opacity: .7; } header a:hover { opacity: 1; }
-  .lede { max-width: 680px; color: #a3a29d; margin: 0 0 48px; }
-  section { margin-bottom: 72px; }
-  section h2 { font: 500 12px/1.4 ui-monospace, Menlo, monospace; color: #7c7b78; margin: 0 0 14px; }
+  /* Registered so CSS keyframes (Feel.handoff) interpolate them instead of flipping. */
+  @property --ft-fill { syntax: "<number>"; inherits: true; initial-value: 0; }
+  @property --fd-open { syntax: "<number>"; inherits: true; initial-value: 0; }
+  @property --fk-level { syntax: "<number>"; inherits: true; initial-value: 0; }
+
+  /* ───────── page */
+  body { margin: 0; background: #fbfbfa; color: #1b1b1a; font: 15px/1.6 Inter, system-ui, sans-serif; font-variation-settings: "opsz" 14; -webkit-font-smoothing: antialiased; }
+  main { max-width: 1040px; margin: 0 auto; padding: 72px 28px 120px; }
+  header { max-width: 640px; margin-bottom: 56px; }
+  header h1 { font-size: 15px; font-weight: 600; margin: 0 0 6px; }
+  header h1 span { color: #8d8c88; font-weight: 400; }
+  header p { margin: 0; color: #4a4a47; }
+  header nav { display: flex; flex-wrap: wrap; gap: 2px; margin: 18px 0 0 -10px; }
+  header nav .ff-item { font-size: 13px; }
+  main > section { margin: 0 0 88px; scroll-margin-top: 32px; }
+  main > section > h2 { font: 500 13px/1.4 ui-monospace, Menlo, monospace; color: #8d8c88; margin: 0 0 18px; }
+  .doc { max-width: 640px; }
+  .doc p { margin: 14px 0 0; color: #4a4a47; }
+  .doc ul { margin: 16px 0 0; padding-left: 18px; color: #4a4a47; display: grid; gap: 6px; }
+  .doc li::marker { color: #b5b4af; }
+  .doc b { color: #1b1b1a; font-weight: 600; }
+  .doc code:not(.cmd code) { font: .88em ui-monospace, Menlo, monospace; padding: 1px 5px; border-radius: 4px; background: #f0efec; }
+
+  .cmd { display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 5px 0 14px; margin-top: 10px; box-sizing: border-box;
+    border-radius: 10px; background: #fff; box-shadow: inset 0 0 0 1px #e6e5e1, 0 1px 2px rgba(16, 16, 20, .04); }
+  .cmd code { flex: 1; min-width: 0; overflow-x: auto; white-space: nowrap; scrollbar-width: none; font: 13.5px/1 ui-monospace, Menlo, monospace; }
+  .cmd code::before { content: "$ "; color: #b5b4af; }
+  .cmd.slash code::before { content: none; }
+  header .cmd { margin-top: 24px; max-width: 420px; }
+
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .steps li { display: grid; grid-template-columns: 34px 1fr; color: #4a4a47; }
+  .steps .n { color: #b5b4af; font: 12px/1.95 ui-monospace, Menlo, monospace; }
+  .keys { display: grid; grid-template-columns: auto 1fr; gap: 10px 18px; margin: 0; align-items: center; color: #4a4a47; }
+  .keys dt { display: flex; gap: 5px; align-items: center; color: #8d8c88; }
+  .keys dd { margin: 0; }
+  .keys kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 6px; box-sizing: border-box; border-radius: 5px;
+    background: #fff; box-shadow: inset 0 0 0 1px #e3e2de, 0 1px 0 #e3e2de; font: 500 12px/1 ui-monospace, Menlo, monospace; color: #1b1b1a; }
+
+  footer { padding-top: 28px; border-top: 1px solid #ecebe7; color: #8d8c88; font-size: 13px; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; }
+  footer a { color: #4a4a47; }
+
+  @media (max-width: 640px) { main { padding: 40px 16px 80px; } }
 
   /* ───────── heavy toggle */
   .ft-switch {
     --ft-fill: 0;
     all: unset; box-sizing: border-box; position: relative; display: block; cursor: grab;
     width: 136px; height: 72px; padding: 6px; border-radius: 999px;
-    background: color-mix(in oklab, #2a2a2e calc((1 - var(--ft-fill)) * 100%), #ff8a3d);
-    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    background: color-mix(in oklab, #e2e1dd calc((1 - var(--ft-fill)) * 100%), #e8590c);
+    box-shadow: inset 0 1px 3px rgba(16, 16, 20, 0.16), inset 0 0 0 1px rgba(16, 16, 20, 0.05);
     touch-action: pan-y;
   }
   .ft-switch:active { cursor: grabbing; }
-  .ft-switch:focus-visible { outline: 2px solid #ff8a3d; outline-offset: 4px; }
+  .ft-switch:focus-visible { outline: 2px solid #6b97ff; outline-offset: 4px; }
   .ft-thumb {
     display: block; width: 60px; height: 60px; border-radius: 999px; transform-origin: 50% 50%;
-    background: radial-gradient(circle at 35% 30%, #ffffff, #d9d8d3 70%);
-    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.3), 0 8px 18px -4px rgba(0, 0, 0, 0.55), inset 0 -2px 3px rgba(0, 0, 0, 0.12);
+    background: radial-gradient(circle at 35% 30%, #ffffff, #f0efec 70%);
+    box-shadow: 0 1px 2px rgba(16, 16, 20, 0.2), 0 6px 14px -4px rgba(16, 16, 20, 0.28), inset 0 -2px 3px rgba(16, 16, 20, 0.06);
     will-change: transform;
   }
 
   /* ───────── magnetic drawer */
   .fd-phone {
     position: relative; width: 248px; height: 420px; border-radius: 34px; overflow: hidden;
-    background: linear-gradient(180deg, #1b1b1f, #121214); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 20px 50px -20px rgba(0, 0, 0, 0.8);
+    background: #fff; box-shadow: inset 0 0 0 1px rgba(16, 16, 20, 0.08), 0 1px 2px rgba(16, 16, 20, 0.05), 0 22px 44px -24px rgba(16, 16, 20, 0.3);
   }
-  .fd-phone::before { content: ""; position: absolute; inset: 0; background: rgba(0, 0, 0, calc(var(--dim, 0) * 0.5)); pointer-events: none; z-index: 1; }
+  .fd-phone::before { content: ""; position: absolute; inset: 0; background: rgba(16, 16, 20, calc(var(--fd-open, 0) * 0.22)); pointer-events: none; z-index: 1; }
   .fd-app { padding: 46px 18px; display: grid; gap: 10px; }
-  .fd-app i { display: block; height: 12px; border-radius: 6px; background: rgba(255, 255, 255, 0.07); }
-  .fd-app i:nth-child(1) { width: 60%; height: 18px; background: rgba(255, 255, 255, 0.12); }
+  .fd-app i { display: block; height: 12px; border-radius: 6px; background: rgba(16, 16, 20, 0.05); }
+  .fd-app i:nth-child(1) { width: 60%; height: 18px; background: rgba(16, 16, 20, 0.09); }
   .fd-app i:nth-child(3) { width: 80%; } .fd-app i:nth-child(5) { width: 70%; }
   .fd-sheet {
     --fd-open: 0;
     position: absolute; left: 0; right: 0; top: 50px; height: 420px; z-index: 2; border-radius: 22px 22px 0 0;
-    background: #232327; box-shadow: 0 -10px 30px rgba(0, 0, 0, calc(0.25 + var(--fd-open) * 0.35)), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    background: #fff; box-shadow: 0 -8px 26px rgba(16, 16, 20, calc(0.06 + var(--fd-open) * 0.1)), inset 0 0 0 1px rgba(16, 16, 20, 0.06);
     will-change: transform;
   }
   .fd-handle { display: grid; place-items: center; height: 34px; cursor: grab; touch-action: none; outline: none; }
   .fd-handle:active { cursor: grabbing; }
-  .fd-handle::before { content: ""; width: 38px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.28); }
-  .fd-handle:focus-visible::before { background: #ff8a3d; }
+  .fd-handle::before { content: ""; width: 38px; height: 5px; border-radius: 3px; background: rgba(16, 16, 20, 0.16); }
+  .fd-handle:focus-visible::before { background: #6b97ff; }
   .fd-rows { padding: 4px 16px; display: grid; gap: 10px; }
-  .fd-rows b { display: flex; align-items: center; gap: 10px; font: 500 13px/1 Inter, system-ui; color: #d8d7d2; }
-  .fd-rows b::before { content: ""; width: 30px; height: 30px; border-radius: 9px; background: rgba(255, 255, 255, 0.08); }
+  .fd-rows b { display: flex; align-items: center; gap: 10px; font: 500 13px/1 Inter, system-ui; color: #1b1b1a; }
+  .fd-rows b::before { content: ""; width: 30px; height: 30px; border-radius: 9px; background: #f3f3f1; box-shadow: inset 0 0 0 1px rgba(16, 16, 20, 0.05); }
+
+  /* ───────── corner card */
+  .fc-screen {
+    position: relative; width: 340px; height: 230px; border-radius: 16px; overflow: hidden;
+    background: #fff; box-shadow: inset 0 0 0 1px rgba(16, 16, 20, 0.08), 0 1px 2px rgba(16, 16, 20, 0.05), 0 22px 44px -24px rgba(16, 16, 20, 0.3);
+  }
+  .fc-app { padding: 22px 24px; display: grid; gap: 10px; }
+  .fc-app i { display: block; height: 10px; border-radius: 5px; background: rgba(16, 16, 20, 0.05); }
+  .fc-app i:nth-child(1) { width: 45%; height: 16px; background: rgba(16, 16, 20, 0.09); }
+  .fc-app i:nth-child(2) { width: 90%; } .fc-app i:nth-child(4) { width: 75%; } .fc-app i:nth-child(6) { width: 60%; }
+  .fc-card {
+    position: absolute; left: 12px; top: 12px; z-index: 1; box-sizing: border-box; width: 112px; height: 70px; padding: 10px 12px;
+    display: grid; align-content: space-between; border-radius: 12px; cursor: grab; outline: none; will-change: transform;
+    background: #1b1b1a; box-shadow: 0 1px 2px rgba(16, 16, 20, 0.08), 0 4px 12px rgba(16, 16, 20, 0.12);
+  }
+  .fc-card:active { cursor: grabbing; }
+  .fc-card:focus-visible { outline: 2px solid #6b97ff; outline-offset: 3px; }
+  .fc-card span { display: flex; align-items: center; gap: 6px; font: 500 12px/1.2 Inter, system-ui; color: #fbfbfa; white-space: nowrap; }
+  .fc-card span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #e8590c; }
+  .fc-card em { font: 11px/1 ui-monospace, Menlo, monospace; font-style: normal; color: #a3a29d; }
+
+  /* ───────── rotary knob */
+  .fk-knob { --fk-level: 0; position: relative; width: 168px; height: 168px; margin: 24px; border-radius: 50%; cursor: grab; outline: none; }
+  .fk-knob:active { cursor: grabbing; }
+  .fk-knob:focus-visible { outline: 2px solid #6b97ff; outline-offset: 20px; }
+  .fk-ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: conic-gradient(from 225deg, #e8590c 0deg calc(var(--fk-level) * 270deg), #e2e1dd calc(var(--fk-level) * 270deg) 270deg, transparent 270deg);
+    -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+    mask: radial-gradient(closest-side, transparent calc(100% - 7px), #000 calc(100% - 6px));
+  }
+  .fk-cap {
+    position: absolute; inset: 18px; border-radius: 50%; will-change: transform;
+    background: radial-gradient(circle at 35% 30%, #ffffff, #eeede9 72%);
+    box-shadow: 0 1px 2px rgba(16, 16, 20, 0.12), 0 12px 24px -10px rgba(16, 16, 20, 0.32), inset 0 1px 0 #fff, inset 0 -2px 4px rgba(16, 16, 20, 0.06), inset 0 0 0 1px rgba(16, 16, 20, 0.04);
+  }
+  .fk-mark { position: absolute; left: 50%; top: 10px; width: 4px; height: 20px; margin-left: -2px; border-radius: 2px; background: #1b1b1a; }
+  .fk-tick { position: absolute; left: 50%; top: 50%; width: 2px; height: 7px; margin: -3.5px 0 0 -1px; border-radius: 1px; background: rgba(16, 16, 20, 0.22); transform: rotate(var(--a)) translateY(-96px); pointer-events: none; }
 </style>
 </head>
 <body>
 <main>
   <header>
-    <h1>Feel <span>· interactions built on physics. No hand-picked durations.</span></h1>
-    <nav><a href="https://github.com/diip3sh/feel">GitHub</a></nav>
+    <h1>Feel <span>· interactions built on physics</span></h1>
+    <p>A skill for coding agents. Say how an interaction should feel and your agent builds it on a body with mass, a spring and damping, in a force field. Nothing has a hand-picked duration. Each figure below is the live component beside the motion it just made: the dashed line is what the model predicted, the orange line is what the component did.</p>
+    <div class="cmd"><code>npx skills add diip3sh/feel</code><button class="ff-btn ff-square" type="button" aria-label="Copy install command"></button></div>
+    <nav aria-label="Sections">
+      <a class="ff-item" href="#install">Install</a>
+      <a class="ff-item" href="#use">How to use it</a>
+      <a class="ff-item" href="#how">How it works</a>
+      <a class="ff-item" href="#keys">Keys</a>
+      <a class="ff-item" href="https://github.com/diip3sh/feel">GitHub</a>
+    </nav>
   </header>
-  <p class="lede">Say how it should feel. Every motion below comes from a body with mass on a spring with damping, in a force field. The dashed ghost is the exact solution; the orange line is what the component actually did.</p>
 
-  <section><h2>01 · a toggle that feels heavy</h2><div id="rig-toggle"></div></section>
-  <section><h2>02 · a drawer with a magnetic snap</h2><div id="rig-drawer"></div></section>
+  <section><h2>01 · Heavy toggle</h2><div id="rig-toggle"></div></section>
+  <section><h2>02 · Magnetic drawer</h2><div id="rig-drawer"></div></section>
+  <section><h2>03 · Card thrown to a corner</h2><div id="rig-card"></div></section>
+  <section><h2>04 · Detented knob</h2><div id="rig-knob"></div></section>
+
+  <section class="doc" id="install">
+    <h2>Install</h2>
+    <div class="cmd"><code>npx skills add diip3sh/feel</code><button class="ff-btn ff-square" type="button" aria-label="Copy install command"></button></div>
+    <p>What you install is one folder: the skill, its runtime (one script, one stylesheet and the rig) and four example components. There is no npm install, and Node is only needed for the audit. Or clone it:</p>
+    <div class="cmd"><code>git clone https://github.com/diip3sh/feel ~/.claude/skills/feel</code><button class="ff-btn ff-square" type="button" aria-label="Copy git clone command"></button></div>
+  </section>
+
+  <section class="doc" id="use">
+    <h2>How to use it</h2>
+    <div class="cmd slash"><code>/feel a toggle that feels heavy, React</code><button class="ff-btn ff-square" type="button" aria-label="Copy example"></button></div>
+    <div class="cmd slash"><code>/feel bottom sheet with three magnetic stops, slightly bouncy</code><button class="ff-btn ff-square" type="button" aria-label="Copy example"></button></div>
+    <ul>
+      <li>Restart your agent after installing, then type the command with the interaction you want and how it should feel.</li>
+      <li>You don't need the command. Ask for something that should feel heavy, snappy, magnetic or thrown and the skill is picked up on its own.</li>
+      <li>Out comes the component and a rig like the ones above. The rig exports the same spring to Framer Motion, react-spring, SwiftUI, Compose or CSS.</li>
+    </ul>
+  </section>
+
+  <section class="doc" id="how">
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li><span class="n">01</span><span><b>Words to physics.</b> <code>Feel.words("heavy, snappy")</code> returns a mass, a natural frequency and a damping ratio, and from them stiffness and damping.</span></li>
+      <li><span class="n">02</span><span><b>Choose the model.</b> A spring to a target, magnets that catch a coasting body, walls that stop the overshoot, on a line, in a plane or around a dial.</span></li>
+      <li><span class="n">03</span><span><b>Build on a body.</b> A tap moves the target. A drag pulls through a hand spring, so heavy things lag. A release keeps the real velocity, and the decision comes from where it would coast.</span></li>
+      <li><span class="n">04</span><span><b>Measure it.</b> The rig draws the exact solution under what the component did. Switch it to CSS keyframes and each release is baked from the same model and played by the browser.</span></li>
+      <li><span class="n">05</span><span><b>Audit.</b> <code>node scripts/audit.mjs</code> fails on any hand-picked duration, easing curve or timer that moves things.</span></li>
+    </ol>
+  </section>
+
+  <section class="doc" id="keys">
+    <h2>Keys</h2>
+    <dl class="keys">
+      <dt><kbd>Tab</kbd></dt><dd>Focus a figure, its component or a control in its margin</dd>
+      <dt><kbd>Space</kbd></dt><dd>Toggle the switch</dd>
+      <dt><kbd>1</kbd>–<kbd>4</kbd></dt><dd>Send the drawer to a stop, or the card to a corner</dd>
+      <dt><kbd>[</kbd><kbd>]</kbd></dt><dd>Step the knob one detent</dd>
+      <dt><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd></dt><dd>Step the focused component</dd>
+      <dt><kbd>F</kbd></dt><dd>Flick it</dd>
+    </dl>
+  </section>
+
+  <footer>
+    <span>MIT © diip3sh · Controls after <a href="https://www.fluidfunctionalism.com/">Fluid Functionalism</a></span>
+    <a href="https://github.com/diip3sh/feel">github.com/diip3sh/feel</a>
+  </footer>
 </main>
 
+<!-- The specimens. Each rig moves its own into its bench. -->
 <div hidden>
   <button class="ft-switch" id="toggle" role="switch" aria-checked="false" aria-label="Heavy toggle"><span class="ft-thumb"></span></button>
   <div class="fd-phone" id="phone">
@@ -84,27 +212,46 @@
       <div class="fd-rows"><b>Share</b><b>Duplicate</b><b>Move to folder</b><b>Archive</b><b>Delete</b></div>
     </div>
   </div>
+  <div class="fc-screen" id="screen">
+    <div class="fc-app"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="fc-card" id="pip" aria-label="Floating call. Arrow keys move it to a corner."><span>Standup</span><em>12:04</em></div>
+  </div>
+  <div class="fk-knob" id="knob" aria-label="Heavy knob with 11 detents"><span class="fk-ring"></span><span class="fk-cap"><i class="fk-mark"></i></span></div>
 </div>
 
 <script src="runtime/feel.js"></script>
 <script src="runtime/rig.js"></script>
 <script src="components/heavy-toggle.js"></script>
 <script src="components/magnetic-drawer.js"></script>
+<script src="components/corner-card.js"></script>
+<script src="components/rotary-knob.js"></script>
 <script>
+  // ─── page chrome: the same controls the rigs use
+  const { ICON, label, fluid, copy } = Feel.ui;
+  const nav = document.querySelector("header nav");
+  for (const a of nav.querySelectorAll(".ff-item")) a.innerHTML = label(a.textContent);
+  fluid(nav, { axis: "x" });
+  for (const cmd of document.querySelectorAll(".cmd")) {
+    const btn = cmd.querySelector(".ff-btn");
+    btn.innerHTML = `<span class="ff-icons">${ICON.copy}${ICON.done}${ICON.fail}</span>`;
+    copy(btn, () => cmd.querySelector("code").textContent);
+  }
+
   // Rigs need the components laid out first, so mount them into their benches before measuring.
-  const toggleEl = document.getElementById("toggle");
-  const phone = document.getElementById("phone");
-  const sheet = document.getElementById("sheet");
+  const mount = (id, el) => {
+    const host = document.getElementById(id), stage = document.createElement("div");
+    stage.appendChild(el);
+    host.appendChild(stage);
+    return { host, stage };
+  };
 
   // 01 · heavy toggle
-  const hostT = document.getElementById("rig-toggle");
-  const stageT = document.createElement("div");
-  stageT.appendChild(toggleEl);
-  hostT.appendChild(stageT);
+  const toggleEl = document.getElementById("toggle");
+  const T = mount("rig-toggle", toggleEl);
   const t = Feel.heavyToggle(toggleEl, { feel: "heavy" });
-  window.toggleRig = Feel.rig(hostT, {
-    fig: 1, title: "Toggle · heavy", body: t.body, stage: stageT, travel: [0, t.travel], stops: [0, t.travel],
-    feel: "heavy", hint: "Drag the thumb · flick it · Space toggles",
+  window.toggleRig = Feel.rig(T.host, {
+    fig: 1, title: "Toggle · heavy", body: t.body, stage: T.stage, travel: [0, t.travel], stops: [0, t.travel],
+    feel: "heavy", hint: "Drag the thumb · flick it · Space toggles", handoff: (on) => t.css(on),
     actions: [
       { key: "Space", label: "toggle", run: () => t.toggle() },
       { key: "F", label: "flick", run: () => t.flick(t.checked ? -900 : 900) },
@@ -113,22 +260,48 @@
   });
 
   // 02 · magnetic drawer
-  const hostD = document.getElementById("rig-drawer");
-  const stageD = document.createElement("div");
-  stageD.appendChild(phone);
-  hostD.appendChild(stageD);
+  const phone = document.getElementById("phone");
+  const D = mount("rig-drawer", phone);
   const stops = [0, 170, 330];
-  const d = Feel.magneticDrawer(sheet, { stops, feel: "magnetic", start: 330, onStop: () => {} });
-  const dim = () => phone.style.setProperty("--dim", getComputedStyle(sheet).getPropertyValue("--fd-open"));
-  const prev = d.body.onFrame; d.body.onFrame = (b) => { prev(b); dim(); };
-  window.drawerRig = Feel.rig(hostD, {
-    fig: 2, title: "Drawer · magnetic", body: d.body, stage: stageD, travel: [0, 330], stops,
-    feel: "magnetic", hint: "Drag the handle · flick between stops · tap to step",
+  const d = Feel.magneticDrawer(document.getElementById("sheet"), { stops, feel: "magnetic", start: 330, scrim: phone });
+  window.drawerRig = Feel.rig(D.host, {
+    fig: 2, title: "Drawer · magnetic", body: d.body, stage: D.stage, travel: [0, 330], stops,
+    feel: "magnetic", hint: "Drag the handle · flick between stops · tap to step", handoff: (on) => d.css(on),
     actions: [
       { key: "1", label: "open", run: () => d.go(0) },
       { key: "2", label: "half", run: () => d.go(1) },
       { key: "3", label: "peek", run: () => d.go(2) },
       { key: "F", label: "flick up", run: () => d.body.kick(-1400) },
+    ],
+  });
+
+  // 03 · corner card (a body in a plane)
+  const screen = document.getElementById("screen");
+  const C = mount("rig-card", screen);
+  const c = Feel.cornerCard(document.getElementById("pip"), { area: screen, feel: "airy, slightly magnetic", inset: 12 });
+  window.cardRig = Feel.rig(C.host, {
+    fig: 3, title: "Card · thrown to a corner", body: c.body, stage: C.stage, travel: c.travel,
+    feel: "airy, slightly magnetic", hint: "Throw the card · the nearest corner catches it · arrows step", handoff: (on) => c.css(on),
+    actions: [
+      { key: "1", label: "top left", run: () => c.go(0) },
+      { key: "2", label: "top right", run: () => c.go(1) },
+      { key: "3", label: "bottom right", run: () => c.go(2) },
+      { key: "4", label: "bottom left", run: () => c.go(3) },
+      { key: "F", label: "fling across", run: () => c.fling(2600) },
+    ],
+  });
+
+  // 04 · rotary knob (a body in degrees)
+  const knobEl = document.getElementById("knob");
+  const K = mount("rig-knob", knobEl);
+  const k = Feel.rotaryKnob(knobEl, { feel: "heavy, clicky", detents: 11, range: [-135, 135], value: 5 });
+  window.knobRig = Feel.rig(K.host, {
+    fig: 4, title: "Knob · heavy, detented", body: k.body, stage: K.stage, travel: [-135, 135], stops: k.stops,
+    feel: "heavy, clicky", hint: "Turn it · flick it · arrow keys step a detent", handoff: (on) => k.css(on),
+    actions: [
+      { key: "[", label: "step down", run: () => k.step(-1) },
+      { key: "]", label: "step up", run: () => k.step(1) },
+      { key: "F", label: "flick", run: () => k.body.kick(k.body.x > 0 ? -1200 : 1200) },
     ],
   });
 </script>

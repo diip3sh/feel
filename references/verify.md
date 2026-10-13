@@ -13,6 +13,9 @@ It must print `passed`. It checks:
 - **Passivity:** energy never grows while nobody touches the body.
 - **Settling:** every body rests within 4 s, with no NaN.
 - **Taps land:** in a magnet field, `kickTo` lands on every stop from every other stop.
+- **The plane:** a `Body2D` thrown sideways off its target follows the exact solution on each axis.
+- **Taps land in a plane, on a dial and on a wheel:** every corner from every corner, every detent one step either way, and steps across a wheel's seam at 360°.
+- **Bakes:** the keyframes `Feel.handoff` plays stay within their tolerance of the path, end exactly at rest, and the path matches the JS loop's steps.
 
 ## With your hands
 
@@ -28,4 +31,7 @@ Do each of these in the rig and write one line about what you saw.
 8. **Measured on predicted.** After "let go", the orange line sits on the dashed prediction. If they differ, something outside the model is moving the element (a CSS transition, a layout change, a second writer).
 9. **Keyboard only.** Every state can be reached, and the motion is the same physics.
 10. **Reduced motion.** Released bodies jump to rest. Dragging still tracks.
-11. **The words still describe it.** Read the readout aloud: does "m 3 · 1.35 Hz · ζ 0.74" match "heavy"? If you had to move a dial far from the word's numbers, change the words, not just the dial, and say why.
+11. **In a plane, throw it diagonally.** It goes to the corner the throw points at, and the path sits on the dashed path. A short throw stays in its corner.
+12. **On a dial, turn it past the end.** The wall catches it. A flick passes as many detents as its momentum carries, then clicks into one.
+13. **CSS keyframes.** Switch the rig's "Runs on" to CSS keyframes and repeat 3, 6 and 8. The motion is the same, a grab mid-flight doesn't jump, and the measured line (read back from the element) still sits on the prediction.
+14. **The words still describe it.** Read the readout aloud: does "m 3 · 1.35 Hz · ζ 0.74" match "heavy"? If you had to move a dial far from the word's numbers, change the words, not just the dial, and say why.

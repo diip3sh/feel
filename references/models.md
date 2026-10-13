@@ -33,6 +33,34 @@ A field is a force that depends on position. A body in a field has `target: null
 - **`Feel.gravity(g)`**: a constant force, for things that should fall back to one side.
 - **A force of your own** is `(x, v, body) => force`, in px/s² times mass. Give it `.rest(x)` if it has resting points, and `.kind` so the rig and export know what it is. Scale strengths by `body.mass` (as `magnets` does) if the feel should stay the same when mass changes.
 
+## A plane
+
+`Feel.Body2D` is the same equation on x and y at once: one mass, one isotropic spring (`target: { x, y }`) and one damping, with walls per axis (`min: { x, y }`, `max: { x, y }`). Use it when a thing is thrown in two directions at once.
+
+- **`Feel.points({ stops: [{ x, y }, …], reachFreq, clickFreq, clickRadius })`** is magnets in a plane. The nearest stop is measured in a straight line, so a diagonal throw goes to the corner it points at. Two 1D bodies can't do this, because which stop is nearest depends on both coordinates.
+- **`Feel.friction2d({ level })`** opposes the direction of motion, not each axis on its own.
+- **The commands take points:** `to({ x, y })`, `kick(vx, vy)`, `kickTo(stop)`. `projected()` returns a point. `kickTo` leaves along the straight line to the stop, at the speed found by simulating forward.
+- **A force of your own** in a plane is `(x, y, vx, vy, body) => [fx, fy]`.
+- **Drag** with `Feel.drag(el, body, { axis: "xy" })`.
+
+## An angle
+
+A knob, dial or wheel is a `Feel.Body` in degrees (`unit: "°"`). Nothing else changes: stiffness is per degree, and the rig and export label it.
+
+- **Detents** are `Feel.magnets` with stops in degrees. A click radius of a third of the gap between detents feels like a click without grabbing between them.
+- **A bounded knob** has walls at `min` and `max`, like a toggle's track.
+- **A wheel that turns forever** adds `period: 360` to its magnets. 355° is then 5° from the stop at 0°, and `rest()` returns the copy of the stop nearest the body, unwrapped (360°, not 0°), so the angle never jumps.
+- **Drag** with `Feel.drag(el, body, { axis: "angle" })`. The pointer's angle around the element's centre (or `pivot`'s) is unwrapped, so crossing ±180° is a small turn.
+
+## Handing off to the browser
+
+`Feel.handoff(body, styles)` lets the browser play every free motion. When nobody holds the body, it simulates the whole future once at 240 Hz (spring, walls, fields and the velocity it has), keeps the fewest samples whose straight lines stay within 0.2 units of the path, and plays them as keyframes. The duration is the settle time of that path, not a choice.
+
+- **Interruptible:** a grab or a command mid-flight reads the state at that instant from the same path, paints it inline and cancels the keyframes. Nothing jumps.
+- **The same physics:** the baked path is the one the JS loop would have stepped. `scripts/audit.mjs` checks it to the bit.
+- **Custom properties** (a fill, a level) need `@property` with a `<number>` syntax, or the browser flips them halfway instead of interpolating.
+- **A drag runs in JavaScript.** The hand is an input, so it can't be baked.
+
 ## The hand
 
 A drag never sets x. `grab/move/release` attach a hand spring between the pointer and the body. It's tuned at 6 Hz for a unit mass and critically damped relative to the pointer's velocity.

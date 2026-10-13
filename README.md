@@ -2,10 +2,10 @@
 
 **Interactions built on physics. No hand-picked durations.** A skill for Claude Code, plus the runtime and test rig it uses.
 
-Say how it should feel, for example "a toggle that feels heavy" or "a drawer with a magnetic snap". You get two things:
+Say how it should feel, for example "a toggle that feels heavy", "a drawer with a magnetic snap" or "a card you throw into a corner". You get two things:
 
-- **A production component** driven by mass, stiffness, damping and force fields.
-- **A test rig** that plots position, velocity and the force field. It overlays the model's prediction on the measured motion and exports the same spring to Framer Motion, react-spring, SwiftUI, Compose or CSS `linear()`.
+- **A production component** driven by mass, stiffness, damping and force fields, on a line, in a plane or around a dial.
+- **A test rig** that plots position, velocity and the force field. It overlays the model's prediction on the measured motion, can hand each release to the browser as CSS keyframes baked from the same model, and exports the same spring to Framer Motion, react-spring, SwiftUI, Compose or CSS `linear()`.
 
 ## The rule
 
@@ -24,11 +24,13 @@ python3 -m http.server 8750
 open http://127.0.0.1:8750/
 ```
 
-**Heavy toggle:** drag it slowly, flick it, or let go halfway. **Magnetic drawer:** flick the sheet and watch which magnet catches it.
+**Heavy toggle:** drag it slowly, flick it, or let go halfway. **Magnetic drawer:** flick the sheet and watch which magnet catches it. **Corner card:** throw it diagonally. **Knob:** turn it, flick it, and feel the detents. Switch any rig's "Runs on" to CSS keyframes and the browser plays each release instead.
 
 ## Install the skill
 
 ```bash
+npx skills add diip3sh/feel
+# or
 git clone https://github.com/diip3sh/feel ~/.claude/skills/feel
 ```
 
@@ -45,7 +47,9 @@ Feel.drag(el, body, { axis: "x", onTap: () => body.to(body.target ? 0 : 60) });
 body.onRelease = (b, projected) => b.to(projected > 30 ? 60 : 0);
 ```
 
-`Feel.words("very heavy, snappy")`, `Feel.metrics(params)`, `Feel.magnets({ stops })`, `Feel.exportCode(params, "framer")`, `Feel.rig(host, { body, stage, travel })`. React: `runtime/react/useFeel.ts`.
+`Feel.words("very heavy, snappy")`, `Feel.metrics(params)`, `Feel.magnets({ stops, period })`, `Feel.Body2D` with `Feel.points({ stops })`, `Feel.drag(el, body, { axis: "x" | "y" | "xy" | "angle" })`, `Feel.handoff(body, styles)`, `Feel.exportCode(params, "framer")`, `Feel.rig(host, { body, stage, travel })`. React: `runtime/react/useFeel.ts`.
+
+The rig's controls (`Feel.ui`) follow [Fluid Functionalism](https://www.fluidfunctionalism.com/), ported to plain DOM and moved by Feel springs.
 
 ## Audit
 
@@ -53,5 +57,7 @@ body.onRelease = (b, projected) => b.to(projected > 30 ? 60 : 0);
 node scripts/audit.mjs            # components + demo
 node scripts/audit.mjs src/ --feel "heavy, snappy"
 ```
+
+It scans for hand-picked durations, checks the solver against the exact solution on a line and in a plane, checks passivity and settling, checks that taps land on every stop, corner, detent and across a wheel's seam, and checks that baked CSS keyframes match the JS loop.
 
 MIT © diip3sh

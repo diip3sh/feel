@@ -1,5 +1,51 @@
-/*! Feel rig v0.1 · MIT */
+/*! Feel rig v0.2 · MIT
+ *
+ * The figure follows Exploded: a borderless card with mono corner labels and
+ * the controls in a margin on the right. The controls follow Fluid
+ * Functionalism (fluidfunctionalism.com, MIT). Nothing here has a transition:
+ * whatever moves is a Feel spring in rig.js.
+ */
+:root, .fl {
+  /* Canvas colours: plain values, a 2D context can't read color-mix(). */
+  --fl-card: #fbfbfa;
+  --fl-text: #1b1b1a;
+  --fl-muted: #8d8c88;
+  --fl-faint: rgba(0, 0, 0, 0.08);
+  --fl-line: rgba(0, 0, 0, 0.16);
+  --fl-lit: #e8590c;
+  --fl-band: rgba(232, 89, 12, 0.09);
+  --fl-ghost: rgba(0, 0, 0, 0.4);
+  --fl-bench: #f3f3f1;
+  --fl-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --fl-sans: Inter, system-ui, sans-serif;
+
+  /* Fluid Functionalism tokens */
+  --ff-fg: #1b1b1a;
+  --ff-muted: #737373;
+  --ff-faint: #a3a3a3;
+  --ff-surface: #ffffff;
+  --ff-border: rgba(0, 0, 0, 0.1);
+  --ff-hover: rgba(0, 0, 0, 0.045);
+  --ff-active: rgba(0, 0, 0, 0.07);
+  --ff-code: #f4f4f2;
+  --ff-ring: #6b97ff;
+  --ff-ring-soft: rgba(107, 151, 255, 0.22);
+  --ff-red: #e5484d;
+  --ff-normal: "wght" 400, "opsz" 14;
+  --ff-semibold: "wght" 550, "opsz" 18;
+}
 .fl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 236px;
+  grid-template-areas: "card margin" "foot margin";
+  column-gap: 28px;
+  row-gap: 6px;
+  align-items: start;
+  color: var(--fl-text);
+  font-family: var(--fl-sans);
+  font-variation-settings: var(--ff-normal);
+}
+.fl[data-theme="dark"] {
   --fl-card: #0e0e0f;
   --fl-text: #ececea;
   --fl-muted: #7c7b78;
@@ -8,75 +54,173 @@
   --fl-lit: #ff8a3d;
   --fl-band: rgba(255, 138, 61, 0.1);
   --fl-ghost: rgba(255, 255, 255, 0.45);
-  --fl-bench: #0b0b0c;
-  --fl-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 236px;
-  gap: 28px;
-  align-items: start;
-  color: var(--fl-text);
-}
-.fl[data-theme="light"] {
-  --fl-card: #fbfbfa;
-  --fl-text: #1b1b1a;
-  --fl-muted: #8d8c88;
-  --fl-faint: rgba(0, 0, 0, 0.09);
-  --fl-line: rgba(0, 0, 0, 0.16);
-  --fl-lit: #e8590c;
-  --fl-band: rgba(232, 89, 12, 0.09);
-  --fl-ghost: rgba(0, 0, 0, 0.4);
-  --fl-bench: #f3f3f1;
+  --fl-bench: #141416;
+  --ff-fg: #ececea;
+  --ff-muted: #a1a1a1;
+  --ff-faint: #6b6b6b;
+  --ff-surface: #18181a;
+  --ff-border: rgba(255, 255, 255, 0.12);
+  --ff-hover: rgba(255, 255, 255, 0.05);
+  --ff-active: rgba(255, 255, 255, 0.09);
+  --ff-code: #18181a;
 }
 
-.fl-card { position: relative; background: var(--fl-card); border-radius: 10px; box-shadow: inset 0 0 0 1px var(--fl-faint); padding: 44px 18px 40px; outline: none; }
-.fl-card:focus-visible { box-shadow: inset 0 0 0 1px var(--fl-muted); }
-.fl-corner { position: absolute; font: 11px/1.4 var(--fl-mono); color: var(--fl-muted); pointer-events: none; }
-.fl-tl { top: 16px; left: 18px; color: var(--fl-text); }
-.fl-tr { top: 16px; right: 18px; }
-.fl-bl { bottom: 14px; left: 18px; }
-.fl-br { bottom: 14px; right: 18px; color: var(--fl-text); font-variant-numeric: tabular-nums; text-align: right; max-width: 70%; }
+/* ── card */
+/* The corners sit in the card's own grid, so a long hint or readout wraps instead of covering the bench. */
+.fl-card {
+  grid-area: card; position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+  grid-template-areas: "tl tr" "grid grid" "bl br"; gap: 12px 16px; padding: 16px 18px; background: var(--fl-card); border-radius: 10px; outline: none;
+}
+.fl-card:focus-visible { outline: 1px solid var(--fl-muted); outline-offset: 6px; }
+.fl-corner { font: 11px/1.4 var(--fl-mono); letter-spacing: 0.01em; color: var(--fl-muted); pointer-events: none; }
+.fl-tl { grid-area: tl; color: var(--fl-text); }
+.fl-tr { grid-area: tr; text-align: right; }
+.fl-bl, .fl-br { min-height: 2.8em; }
+.fl-bl { grid-area: bl; }
+.fl-br { grid-area: br; text-align: right; color: var(--fl-text); font-variant-numeric: tabular-nums; }
 
-.fl-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 14px; min-height: 380px; }
+.fl-grid { grid-area: grid; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 12px; min-height: 380px; }
+.fl-grid.fl-plane { min-height: 500px; }
 .fl-bench {
-  position: relative; border-radius: 8px; background: var(--fl-bench);
-  background-image: radial-gradient(var(--fl-faint) 1px, transparent 1px); background-size: 16px 16px;
-  display: grid; place-items: center; overflow: hidden; min-height: 380px;
+  position: relative; display: grid; place-items: center; min-height: 380px; padding: 24px 16px 36px; box-sizing: border-box; overflow: hidden; border-radius: 10px;
+  background: var(--fl-bench) radial-gradient(var(--fl-faint) 1px, transparent 1px) 0 0 / 16px 16px;
 }
 .fl-stage { display: grid; place-items: center; width: 100%; height: 100%; }
 .fl-live { position: absolute; left: 12px; bottom: 10px; font: 10.5px/1 var(--fl-mono); color: var(--fl-muted); font-variant-numeric: tabular-nums; }
 .fl-plots { display: grid; grid-template-rows: 1.3fr 1fr 1fr; gap: 10px; }
-.fl-plot { position: relative; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--fl-faint); min-height: 100px; }
+.fl-plots.fl-plane { grid-template-rows: 1.5fr 0.7fr 1.5fr; }
+.fl-plot { position: relative; min-height: 100px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--fl-faint); }
 .fl-plot canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-.fl-plot-label { position: absolute; top: 7px; right: 10px; font: 10px/1 var(--fl-mono); color: var(--fl-muted); z-index: 1; }
-
-.fl-margin { display: flex; flex-direction: column; gap: 16px; padding-top: 10px; font: 12px/1.45 var(--fl-mono); color: var(--fl-muted); }
-.fl-ask { display: flex; flex-direction: column; gap: 6px; }
-.fl-ask span, .fl-dial span { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
-.fl-ask input { all: unset; font: 13px/1.3 var(--fl-mono); color: var(--fl-text); padding: 8px 10px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--fl-line); }
-.fl-ask input:focus { box-shadow: inset 0 0 0 1px var(--fl-lit); }
-.fl-chips { display: flex; flex-wrap: wrap; gap: 5px; }
-.fl-chips button, .fl-tabs button, .fl-copy, .fl-keys button { all: unset; cursor: pointer; font: 11px/1 var(--fl-mono); color: var(--fl-muted); padding: 5px 7px; border-radius: 5px; box-shadow: inset 0 0 0 1px var(--fl-faint); }
-.fl-chips button:hover, .fl-tabs button:hover, .fl-copy:hover, .fl-keys button:hover { color: var(--fl-text); box-shadow: inset 0 0 0 1px var(--fl-line); }
-.fl-tabs button.is-on { color: var(--fl-text); box-shadow: inset 0 0 0 1px var(--fl-lit); }
-.fl-unknown { min-height: 14px; font-size: 11px; color: var(--fl-lit); }
-.fl-dials { display: flex; flex-direction: column; gap: 10px; }
-.fl-dial { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 4px 8px; }
-.fl-dial span { grid-column: 1 / -1; }
-.fl-dial input { grid-column: 1; accent-color: var(--fl-lit); width: 100%; }
-.fl-dial output { color: var(--fl-text); font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
-.fl-dial em { font-style: normal; font-size: 10px; }
-.fl-metrics { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; margin: 0; padding-top: 10px; border-top: 1px solid var(--fl-faint); }
-.fl-metrics dt { margin: 0; } .fl-metrics dd { margin: 0; color: var(--fl-text); text-align: right; font-variant-numeric: tabular-nums; }
-.fl-keys { display: flex; flex-wrap: wrap; gap: 6px; }
-.fl-keys kbd { font: 10px/1 var(--fl-mono); color: var(--fl-text); margin-right: 6px; }
-.fl-export { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--fl-faint); }
-.fl-tabs { display: flex; flex-wrap: wrap; gap: 5px; }
-.fl-code { margin: 0; white-space: pre-wrap; word-break: break-all; font: 11px/1.5 var(--fl-mono); color: var(--fl-text); max-height: 150px; overflow: auto; padding: 8px; border-radius: 6px; background: var(--fl-bench); }
-.fl-copy { align-self: flex-start; }
-
-@media (max-width: 900px) {
-  .fl { grid-template-columns: 1fr; }
-  .fl-grid { grid-template-columns: 1fr; }
-}
+.fl-plot-label { position: absolute; top: 7px; right: 10px; z-index: 1; font: 10px/1 var(--fl-mono); color: var(--fl-muted); }
 .fl-plot-label i { font-style: normal; color: var(--fl-lit); }
 .fl-plot-label i.fl-dash { color: var(--fl-ghost); }
+
+/* ── under the figure */
+.fl-foot { grid-area: foot; display: grid; grid-template-columns: minmax(0, 252px) minmax(0, 1fr); gap: 28px; padding: 0 18px; }
+.fl-metrics { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 0; font: 12px/1.5 var(--fl-mono); color: var(--fl-muted); }
+.fl-metrics dt, .fl-metrics dd { margin: 0; }
+.fl-metrics dd { color: var(--fl-text); text-align: right; font-variant-numeric: tabular-nums; }
+.fl-metrics dt { white-space: nowrap; }
+.fl-export .ff-tabs { margin: -4px 0 0 -10px; }
+.fl-code-wrap { position: relative; }
+.fl-code { max-height: 168px; padding-right: 44px; }
+.fl-code-wrap .fl-copy { position: absolute; top: 4px; right: 6px; width: 32px; height: 32px; }
+
+/* ── margin */
+.fl-margin { grid-area: margin; display: flex; flex-direction: column; gap: 14px; padding-top: 14px; font: 12px/1.45 var(--fl-mono); color: var(--fl-muted); }
+.fl-margin .fl-sec + .fl-sec { padding-top: 14px; border-top: 1px solid var(--fl-faint); }
+.fl-sec { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 0; }
+.fl-label { font: 10px/1.4 var(--fl-mono); text-transform: uppercase; letter-spacing: 0.08em; color: var(--fl-muted); }
+.fl-chips { display: flex; flex-wrap: wrap; gap: 2px; margin: 0 -8px; }
+.fl-chips .ff-item { padding: 0 8px; }
+.fl-words { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-height: 24px; }
+.fl-note { font: 12px/16px var(--fl-sans); color: var(--ff-muted); }
+.fl-dials { display: flex; flex-direction: column; gap: 6px; }
+.fl-keys { display: flex; flex-direction: column; margin: 0 -8px; }
+.fl-keys .ff-item { display: flex; gap: 10px; padding: 0 8px; }
+.fl-run .ff-tabs { margin-left: -10px; }
+.fl-bake { margin: 0; min-height: 32px; font: 12px/16px var(--fl-sans); color: var(--ff-muted); }
+
+/* ───────────────────────────── Fluid Functionalism, ported */
+
+/* A label that changes weight without changing width. */
+.ff-t { display: inline-grid; justify-items: center; }
+.ff-t > * { grid-area: 1 / 1; white-space: nowrap; }
+.ff-ghost { visibility: hidden; font-variation-settings: var(--ff-semibold); }
+.ff-same .ff-ghost { font-variation-settings: inherit; }
+
+/* Fluid hover: the highlights sit under the items, inside the box. */
+.ff-fluid { position: relative; isolation: isolate; }
+.ff-hl { position: absolute; left: 0; top: 0; z-index: -1; width: 0; height: 0; border-radius: 8px; background: var(--ff-hover); opacity: 0; pointer-events: none; will-change: transform, width, height, opacity; }
+.ff-tabs .ff-hl { background: var(--ff-active); }
+.ff-hl-sel { background: var(--ff-active); }
+
+.ff-item {
+  all: unset; box-sizing: border-box; display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 8px;
+  font: 13px/20px var(--fl-sans); font-variation-settings: var(--ff-normal); color: var(--ff-muted); cursor: pointer;
+  -webkit-tap-highlight-color: transparent; user-select: none;
+}
+.ff-item[data-active], .ff-item.is-on { color: var(--ff-fg); }
+.ff-item[data-active] .ff-label, .ff-item.is-on .ff-label { font-variation-settings: var(--ff-semibold); }
+.ff-item:focus-visible { outline: 2px solid var(--ff-ring); outline-offset: 0; }
+.ff-item:disabled { opacity: 0.4; cursor: not-allowed; }
+.ff-tabs { display: flex; flex-wrap: wrap; gap: 2px; }
+
+/* Ghost button, with an icon that swaps to a check or a cross. */
+.ff-btn {
+  all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 8px;
+  font: 13px/20px var(--fl-sans); font-variation-settings: var(--ff-normal); color: var(--ff-muted); cursor: pointer; flex: none; user-select: none;
+}
+.ff-btn:hover { background: var(--ff-hover); color: var(--ff-fg); }
+.ff-btn:active { background: var(--ff-active); }
+.ff-btn:focus-visible { outline: 2px solid var(--ff-ring); outline-offset: 0; }
+.ff-btn.ff-square { width: 36px; height: 36px; padding: 0; }
+.ff-icons { display: inline-grid; width: 16px; height: 16px; }
+.ff-i { grid-area: 1 / 1; width: 16px; height: 16px; stroke-width: 1.75; }
+.ff-i-done, .ff-i-fail { display: none; transform: scale(var(--pop, 1)); }
+.is-done .ff-i-idle, .is-fail .ff-i-idle { display: none; }
+.is-done .ff-i-done, .is-fail .ff-i-fail { display: block; }
+.is-done .ff-i-done { color: var(--ff-ring); }
+.is-fail .ff-i-fail { color: var(--ff-red); }
+
+.ff-code {
+  margin: 0; padding: 12px 14px; overflow: auto; border-radius: 10px; background: var(--ff-code); box-shadow: inset 0 0 0 1px var(--fl-faint);
+  font: 12px/1.6 var(--fl-mono); color: var(--fl-text); white-space: pre-wrap; overflow-wrap: anywhere; outline: none;
+}
+.ff-code:focus-visible { box-shadow: inset 0 0 0 1px var(--ff-ring), 0 0 0 3px var(--ff-ring-soft); }
+
+.ff-input {
+  display: flex; align-items: center; height: 36px; padding: 0 12px; border-radius: 8px; box-sizing: border-box;
+  background: var(--ff-surface); box-shadow: inset 0 0 0 1px var(--ff-border), 0 1px 2px rgba(16, 16, 20, 0.04); cursor: text;
+}
+.ff-input:hover { box-shadow: inset 0 0 0 1px var(--fl-line), 0 1px 2px rgba(16, 16, 20, 0.04); }
+.ff-input:focus-within { box-shadow: inset 0 0 0 1px var(--ff-ring), 0 0 0 3px var(--ff-ring-soft); }
+.ff-input input { all: unset; flex: 1; min-width: 0; font: 13px/20px var(--fl-sans); color: var(--ff-fg); }
+.ff-input input::placeholder { color: var(--ff-faint); }
+
+.ff-badge {
+  display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px;
+  background: var(--ff-active); color: var(--ff-fg); font: 12px/16px var(--fl-sans); font-variation-settings: var(--ff-semibold);
+}
+.ff-badge.is-red { background: color-mix(in oklab, var(--ff-red) 14%, var(--fl-card)); color: color-mix(in oklab, var(--ff-red) 82%, black); }
+
+.ff-kbd {
+  display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; border-radius: 5px;
+  background: var(--ff-surface); box-shadow: inset 0 0 0 1px var(--ff-border), 0 1px 0 var(--ff-border);
+  font: 500 11px/1 var(--fl-mono); color: var(--ff-fg);
+}
+
+/* The scrubber slider: the row is the track, its fill is the value. */
+.ff-slider {
+  --p: 0;
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 32px; padding: 0 10px;
+  overflow: hidden; border-radius: 8px; user-select: none;
+  font: 13px/20px var(--fl-sans); color: var(--ff-muted);
+}
+/* The border rides above the fill. */
+.ff-slider::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px var(--ff-border); pointer-events: none; }
+.ff-slider-fill { position: absolute; inset: 0 auto 0 0; width: calc(var(--p) * 100%); background: var(--ff-hover); pointer-events: none; }
+.ff-slider-preview { position: absolute; top: 0; bottom: 0; left: calc(var(--hl, 0) * 100%); width: calc(var(--hw, 0) * 100%); background: var(--ff-hover); opacity: 0; pointer-events: none; }
+.ff-slider.is-hover .ff-slider-preview { opacity: 1; }
+.ff-slider-line {
+  position: absolute; top: 7px; bottom: 7px; left: clamp(2px, calc(var(--p) * 100% - 1px), calc(100% - 4px)); width: 2px; border-radius: 1px;
+  background: var(--ff-fg); opacity: 0.25; pointer-events: none;
+}
+.ff-slider:hover .ff-slider-line { opacity: 0.5; }
+.ff-slider:active .ff-slider-line { opacity: 1; }
+.ff-slider-label, .ff-slider-value { position: relative; white-space: nowrap; pointer-events: none; }
+.ff-slider:hover .ff-slider-label, .ff-slider:focus-within .ff-slider-label { color: var(--ff-fg); }
+.ff-slider-value { color: var(--ff-fg); font-variant-numeric: tabular-nums; }
+.ff-slider-value em { margin-left: 3px; font-style: normal; color: var(--ff-muted); }
+.ff-slider input { -webkit-appearance: none; appearance: none; position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; background: transparent; opacity: 0; cursor: pointer; }
+.ff-slider input::-webkit-slider-thumb { -webkit-appearance: none; width: 2px; height: 32px; }
+.ff-slider input::-moz-range-thumb { width: 2px; height: 32px; border: 0; }
+.ff-slider:has(input:focus-visible) { box-shadow: 0 0 0 3px var(--ff-ring-soft); }
+.ff-slider:has(input:focus-visible)::after { box-shadow: inset 0 0 0 1px var(--ff-ring); }
+
+@media (max-width: 900px) {
+  .fl { grid-template-columns: minmax(0, 1fr); grid-template-areas: "card" "margin" "foot"; row-gap: 22px; }
+  .fl-grid { grid-template-columns: minmax(0, 1fr); }
+  .fl-margin { padding: 0 18px; }
+  .fl-foot { grid-template-columns: minmax(0, 1fr); }
+}

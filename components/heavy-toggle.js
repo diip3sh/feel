@@ -6,8 +6,10 @@
  * and the thumb's stretch are read from position and velocity, never from time.
  *
  *   const t = Feel.heavyToggle(buttonEl, { feel: "heavy", checked: false, onChange })
+ *   t.css(true)   // let the browser play each release (Feel.handoff)
  *
  * Markup: <button class="ft-switch" role="switch" aria-checked="false"><span class="ft-thumb"></span></button>
+ * For the fill to glide in CSS mode, register it: @property --ft-fill { syntax: "<number>"; inherits: true; initial-value: 0; }
  */
 (function (global) {
   "use strict";
@@ -27,7 +29,7 @@
       min: 0,
       max: travel,
       name: "thumb",
-      onFrame: render,
+      onFrame: (b) => Feel.paint(styles(b)),
       // A flick decides by where the thumb would coast on its own momentum.
       onRelease: (b, projected) => set(projected > travel / 2),
     });
@@ -37,12 +39,14 @@
       body.to(on ? travel : 0);
     }
 
-    function render(b) {
+    function styles(b) {
       const f = Math.max(0, Math.min(1, b.x / travel));
       // Stretch along the motion, from speed: a heavy thumb barely deforms.
       const stretch = 1 + Math.min(0.22, Math.abs(b.v) / (2600 * Math.sqrt(b.mass)));
-      thumb.style.transform = `translateX(${b.x.toFixed(2)}px) scale(${stretch.toFixed(3)}, ${(1 / Math.sqrt(stretch)).toFixed(3)})`;
-      el.style.setProperty("--ft-fill", f.toFixed(4));
+      return [
+        [thumb, { transform: `translateX(${b.x.toFixed(2)}px) scale(${stretch.toFixed(3)}, ${(1 / Math.sqrt(stretch)).toFixed(3)})` }],
+        [el, { "--ft-fill": f.toFixed(4) }],
+      ];
     }
 
     Feel.drag(el, body, { axis: "x", onTap: () => set(!checked) });
@@ -52,8 +56,9 @@
       else if (e.key === "ArrowLeft") { e.preventDefault(); set(false); }
     });
     el.setAttribute("aria-checked", String(checked));
-    render(body);
+    Feel.paint(styles(body));
 
+    let css = null;
     return {
       body, travel,
       get checked() { return checked; },
@@ -61,6 +66,10 @@
       toggle: () => set(!checked),
       // Throw it: the same decision a real flick makes.
       flick: (vel) => { body.kick(vel); set(body.projected() > travel / 2); },
+      css(on) {
+        if (on && !css) css = Feel.handoff(body, styles, { read: () => new DOMMatrixReadOnly(getComputedStyle(thumb).transform).m41 });
+        else if (!on && css) { css.off(); css = null; }
+      },
     };
   }
 
