@@ -2,6 +2,10 @@
 
 **Interactions built on physics. No hand-picked durations.** A skill for Claude Code, plus the runtime and test rig it uses.
 
+[![Feel: a heavy, detented knob flicked back to its zero detent, with its angle, velocity and force field plotted beside it](assets/poster.png)](assets/demo.mp4)
+
+**[Live demo](https://diip3sh.github.io/feel/)** · **[Watch the video](assets/demo.mp4)**
+
 Say how it should feel, for example "a toggle that feels heavy", "a drawer with a magnetic snap" or "a card you throw into a corner". You get two things:
 
 - **A production component** driven by mass, stiffness, damping and force fields, on a line, in a plane or around a dial.
@@ -18,6 +22,8 @@ Say how it should feel, for example "a toggle that feels heavy", "a drawer with 
 - `scripts/audit.mjs` fails on any `transition: 300ms`, `cubic-bezier`, `duration:` or timer that moves things.
 
 ## Try it
+
+Open the **[live demo](https://diip3sh.github.io/feel/)**, or run it locally:
 
 ```bash
 python3 -m http.server 8750
