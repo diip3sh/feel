@@ -1,6 +1,6 @@
 # Vocabulary
 
-Every word is a point in (mass, natural frequency, damping ratio). Overshoot and settle time are measured on a step from rest, settle meaning the last moment the motion is outside a ±2% band.
+Every word is a point in (mass, natural frequency, damping ratio). Overshoot and settle time are measured on a step from rest, settle meaning the last moment the motion is outside a ±2% band. These are the spring on its own. A component with walls can settle sooner: the heavy toggle's wall at its target stops the 3.2% overshoot, so a tap there settles in about 390 ms, not 686 ms. The rig's Measures and its readout both show the component's number, walls included.
 
 | word | mass | frequency | ζ | overshoot | settles | physical |
 |---|---|---|---|---|---|---|

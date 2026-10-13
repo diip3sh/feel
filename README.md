@@ -58,6 +58,6 @@ node scripts/audit.mjs            # components + demo
 node scripts/audit.mjs src/ --feel "heavy, snappy"
 ```
 
-It scans for hand-picked durations, checks the solver against the exact solution on a line and in a plane, checks passivity and settling, checks that taps land on every stop, corner, detent and across a wheel's seam, and checks that baked CSS keyframes match the JS loop.
+It scans for hand-picked durations, checks the solver against the exact solution on a line and in a plane, checks passivity and settling, checks that taps land on every stop, corner, detent and across a wheel's seam, checks that baked CSS keyframes match the JS loop, and checks that the rig's Measures and its readout give the same settle time.
 
 MIT © diip3sh

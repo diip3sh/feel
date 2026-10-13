@@ -16,12 +16,13 @@ It must print `passed`. It checks:
 - **The plane:** a `Body2D` thrown sideways off its target follows the exact solution on each axis.
 - **Taps land in a plane, on a dial and on a wheel:** every corner from every corner, every detent one step either way, and steps across a wheel's seam at 360°.
 - **Bakes:** the keyframes `Feel.handoff` plays stay within their tolerance of the path, end exactly at rest, and the path matches the JS loop's steps.
+- **One settle time:** a tap's settle (±2% of the move, walls included) read off the trace, as the rig's readout does, matches the rig's Measures. With no walls, both match `Feel.metrics`.
 
 ## With your hands
 
 Do each of these in the rig and write one line about what you saw.
 
-1. **Tap** (or keyboard). It moves, overshoots by about the readout's percentage, and settles in about the readout's time.
+1. **Tap** (or keyboard). It moves, overshoots by about the Measures percentage, and the readout's "settled in" matches Measures' "settles in" (both are ±2% of the move, walls included, timed from "let go").
 2. **Slow drag.** The body follows the finger. A heavy one lags by a few px, and a light one sits under the finger.
 3. **Hard flick.** It travels by momentum. A toggle switches even from a short throw. A drawer passes the nearest stop if the flick beats "flick to escape".
 4. **Flick the wrong way.** A small backwards flick from the far side brings it back. Nothing is decided by where the finger was.

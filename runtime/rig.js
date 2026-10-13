@@ -1,8 +1,8 @@
 /*! Feel rig v0.2 · MIT
  *
  * A test bench for one body: the live component on the left, and on the right
- * the motion it just made (position and velocity over time, with the exact
- * solution as a dashed ghost), the force field it lives in, and a readout.
+ * the motion it just made (position and velocity over time, over the path the
+ * model predicted as a dashed ghost), the force field it lives in, and a readout.
  * A Body2D gets a plane instead: its path over the predicted ghost, its speed,
  * and the field drawn as arrows. The margin holds the feel words, the dials,
  * the keys and a switch between the JS loop and CSS keyframes (Feel.handoff).
@@ -445,7 +445,9 @@
       const p = body.params;
       const coast = [`coast per 1000 ${per}`, u(Math.round((1000 * p.mass) / p.damping))];
       const list = mode === "spring"
-        ? (() => { const m = Feel.metrics(p); return [["stiffness k", r(p.stiffness, 1)], ["damping c", r(p.damping, 2)], ["overshoot", `${r(m.overshoot * 100, 1)}%`], ["settles in", `${Math.round(m.settle * 1000)} ms`], coast]; })()
+        // A tap across the travel, walls included: what the component does, so
+        // it agrees with the readout after a real tap.
+        ? (() => { const m = body.measureStep(lo, hi); return [["stiffness k", r(p.stiffness, 1)], ["damping c", r(p.damping, 2)], ["overshoot", `${r(m.overshoot * 100, 1)}%`], ["settles in", `${Math.round(m.settle * 1000)} ms`], coast]; })()
         : [["stops", stopsText()], ["click radius", u(r(field.cfg.clickRadius, 1))], coast, ["flick to escape", `${escapeV()} ${per}`]];
       metricsEl.innerHTML = list.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
       code.textContent = Feel.exportCode(p, exportKind, body);
@@ -479,7 +481,7 @@
       let tail = "";
       if (body.hand) tail = "held";
       else if (ev && ev.kind !== "settle") tail = ev.kind === "release" ? `released ${r(speedOf(ev), 0)} ${per} → coasts to ${where(ev.projected)}` : "moving";
-      else if (set) tail = `settled in ${Math.round(set.after * 1000)} ms`;
+      else if (set) tail = `settled in ${Math.round((body.lastSettle() ?? set.after) * 1000)} ms`;
       readout.textContent = mode === "spring"
         ? `m ${r(p.mass, 2)} · k ${r(p.stiffness, 0)} · c ${r(p.damping, 1)} · ζ ${r(m.zeta, 2)} · ${r(m.freq, 2)} Hz${tail ? " · " + tail : ""}`
         : `m ${r(p.mass, 2)} · c ${r(p.damping, 1)} · ${field.stops.length} magnets · click ${r(field.cfg.clickFreq, 1)} Hz${tail ? " · " + tail : ""}`;
@@ -501,6 +503,8 @@
       return { g, w, h };
     }
     const pad = { l: 8, r: 8, t: 10, b: 14 };
+    // Where the plot's legend sits, so annotations can keep clear of it.
+    const legendBox = (c) => { const l = c.parentElement.querySelector(".fl-plot-label"); return { left: l.offsetLeft, bottom: l.offsetTop + l.offsetHeight }; };
 
     function windowT() {
       const m = Feel.metrics(body.params);
@@ -536,7 +540,8 @@
         g.stroke(); g.setLineDash([]);
         if (t0 > 0.01) {
           g.strokeStyle = P.faint; g.beginPath(); g.moveTo(X(t0), pad.t); g.lineTo(X(t0), h - pad.b); g.stroke();
-          g.fillStyle = P.muted; g.fillText("let go", X(t0) + 4, pad.t + 9);
+          const lx = X(t0) + 4, lg = legendBox(canv.x);
+          g.fillStyle = P.muted; g.fillText("let go", lx, lx + g.measureText("let go").width > lg.left - 6 ? lg.bottom + 11 : pad.t + 9);
         }
       }
       // the motion it actually made
@@ -626,7 +631,9 @@
         g.stroke(); g.setLineDash([]);
         if (ev.t - body.eventAt > 0.01) {
           g.strokeStyle = P.muted; g.beginPath(); g.arc(X(ev.x), Y(ev.y), 3, 0, 7); g.stroke();
-          g.fillStyle = P.muted; g.fillText("let go", X(ev.x) + 6, Y(ev.y) - 5);
+          const lx = X(ev.x) + 6, lg = legendBox(canv.x);
+          const clash = Y(ev.y) - 14 < lg.bottom + 2 && lx + g.measureText("let go").width > lg.left - 6;
+          g.fillStyle = P.muted; g.fillText("let go", lx, clash ? Y(ev.y) + 13 : Y(ev.y) - 5);
         }
       }
       const tr = body.trace;

@@ -52,12 +52,12 @@ It fails in two ways:
 5. **Put it in the rig.** `Feel.rig(host, { body, stage, travel, stops, feel, actions, handoff })`. Check every one of these:
    - **Measured on predicted:** the orange line sits on the dashed prediction after "let go". In a plane, the path sits on the dashed path.
    - **The force plot reads as the idea:** one slope for a spring, a well per stop for magnets, arrows toward each point in a plane.
-   - **The readout numbers match your sentences from step 2.**
+   - **The readout numbers match your sentences from step 2.** After a tap, the readout's "settled in" matches Measures' "settles in". Both include the walls, so they can be shorter than `Feel.metrics` (the spring alone).
    - **With a `handoff`, switch "Runs on" to CSS keyframes** and do it again: the same motion, and a grab mid-flight doesn't jump.
 6. **Export if the target stack needs it.** The rig's export tabs give the same spring for Framer Motion, react-spring and SwiftUI (identical equation), Compose (unit-mass stiffness), and CSS `linear()`, which is sampled from the exact solution and only replays a step from rest.
    - **A release, a flick or a field in CSS** goes through `Feel.handoff`: each release is baked from the model into keyframes, with the velocity it has.
    - **A field exports to Framer Motion's drag inertia** as an approximation, labelled as one.
-   - **Everything else has no equivalent.** Say so and ship `runtime/feel.js` (13 kB gzipped, comments included).
+   - **Everything else has no equivalent.** Say so and ship `runtime/feel.js` (15 kB gzipped, comments included).
 7. **Verify.** Run `node scripts/audit.mjs <your files> --feel "<your words>"`. It must print `passed`. Then do it with your hands in the browser:
    - a slow drag, a hard flick, a flick the wrong way, and letting go at exactly halfway;
    - grabbing it mid-motion (it must not jump), in JS and in CSS keyframes;
@@ -77,6 +77,8 @@ body.grab(px); body.move(px); body.release();   // what Feel.drag calls for you
 body.projected();      // where it would coast: x + v·m/c
 body.predict(v);       // where it would come to rest from here with velocity v
 body.path(x, v);       // the whole predicted path, for the rig's ghost
+body.measureStep(0, 60);  // a tap from rest, walls and forces included → { overshoot, settle }: the rig's Measures
+body.lastSettle();     // the last motion's settle (±2% of the move, from "let go"), read off the trace: the readout
 
 const card = new Feel.Body2D({ feel: "airy", x: 0, y: 0, target: null, forces: [Feel.points({ stops })], min: { x: 0, y: 0 }, max: { x: W, y: H } });
 card.to({ x, y }); card.kick(vx, vy); card.kickTo(stops[2]);   // the same commands, on points
@@ -125,7 +127,7 @@ Units are px (or degrees) and seconds. Mass 1 is a normal UI element, and the ha
 | `components/magnetic-drawer.js` | Example: a field with no target, taps as impulses solved by simulation. |
 | `components/corner-card.js` | Example: a body in a plane, thrown to the nearest corner, with lift from speed. |
 | `components/rotary-knob.js` | Example: a body in degrees, turned around its centre, with detents as magnets. |
-| `scripts/audit.mjs` | No-durations scan, solver vs exact solution on a line and in a plane, passivity, settling, taps land (stops, corners, detents, across a wheel's seam), and baked keyframes against the loop. |
+| `scripts/audit.mjs` | No-durations scan, solver vs exact solution on a line and in a plane, passivity, settling, taps land (stops, corners, detents, across a wheel's seam), baked keyframes against the loop, and one settle time for the rig's Measures and readout. |
 | `references/vocabulary.md` | Every feel word, its numbers, and how words blend. |
 | `references/models.md` | Springs, fields, walls, the hand, projection, and how to write a new force. |
 | `references/verify.md` | The hands-on checklist. |

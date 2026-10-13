@@ -94,6 +94,29 @@
     return { ...m, stiffness: p.stiffness, damping: p.damping, overshoot, settle, rise: rise1 != null && rise0 != null ? rise1 - rise0 : null, peakVelocity: peakV };
   }
 
+  // The same settle, on any motion: the moment it last came within `within` of
+  // `rest` and stayed there. Between samples the path is rebuilt from position
+  // and velocity (cubic Hermite), so a 60 fps trace and a 240 Hz simulation
+  // agree. Samples are [{ t, x, v }] or [{ t, x, y, vx, vy }]; null if the
+  // motion isn't there yet.
+  function settleTime(samples, rest, within) {
+    const one = typeof rest === "number";
+    const d = (s) => (one ? Math.abs(s.x - rest) : Math.hypot(s.x - rest.x, s.y - rest.y));
+    let i = samples.length - 1;
+    if (i < 0 || d(samples[i]) > within) return null;
+    while (i > 0 && d(samples[i - 1]) <= within) i--;
+    if (i === 0) return samples[0].t;
+    const a = samples[i - 1], b = samples[i], h = b.t - a.t;
+    const herm = (f, pa, va, pb, vb) => {
+      const f2 = f * f, f3 = f2 * f, slope = (pb - pa) / h;
+      return (2 * f3 - 3 * f2 + 1) * pa + (f3 - 2 * f2 + f) * h * (va ?? slope) + (3 * f2 - 2 * f3) * pb + (f3 - f2) * h * (vb ?? slope);
+    };
+    const at = (f) => (one ? { x: herm(f, a.x, a.v, b.x, b.v) } : { x: herm(f, a.x, a.vx, b.x, b.vx), y: herm(f, a.y, a.vy, b.y, b.vy) });
+    let lo = 0, hi = 1;
+    for (let k = 0; k < 30; k++) { const f = (lo + hi) / 2; if (d(at(f)) > within) lo = f; else hi = f; }
+    return a.t + hi * h;
+  }
+
   // ───────────────────────────────────────────── words → physics
   // Each word is a point in (frequency, damping ratio, mass). Several words
   // blend: frequency by geometric mean, damping ratio by mean, mass by product.
@@ -288,6 +311,27 @@
     record(over = {}) {
       this.trace.push({ t: this.clock - this.eventAt, ...this.state(), target: this.rest(), held: !!this.hand, ...over });
       if (this.trace.length > 2400) this.trace.shift();
+    }
+
+    // Settled means within 2% of the move (as in metrics), and never finer
+    // than restX.
+    within(span, band = 0.02) { return Math.max(band * span, this.restX); }
+
+    // How long the last free motion took to settle, read off the trace: from
+    // the release or command that started it (the rig's "let go") to the last
+    // time it came within band of where it came to rest. The move is the
+    // farthest it got from there, so a throw let go at its stop still counts
+    // its swing. The same measure as measureStep, so the readout and the rig's
+    // Measures agree after a tap. null until it has settled.
+    lastSettle(band = 0.02) {
+      const ev = [...this.events].reverse().find((e) => e.kind !== "settle" && e.kind !== "grab" && e.t >= this.eventAt);
+      const r = this.rest();
+      if (!ev || r == null) return null;
+      const t0 = ev.t - this.eventAt;
+      const run = [{ ...ev, t: t0 }, ...this.trace.filter((s) => s.t > t0 + 1e-9)];
+      const d = (s) => (this.dims === 1 ? Math.abs(s.x - r) : Math.hypot(s.x - r.x, s.y - r.y));
+      const t = settleTime(run, r, this.within(Math.max(...run.map(d)), band));
+      return t == null ? null : t - t0;
     }
 
     wake() {
@@ -487,6 +531,23 @@
       const ghost = this.ghost({ x: x0, v: v0 });
       for (let t = 0; t < horizon; t += 1 / 60) { ghost.step(1 / 60); if (ghost.settled()) break; }
       return ghost.rest();
+    }
+
+    // A tap from rest at `from` to `to` with this body's walls and forces: what
+    // the component does, which can differ from its spring alone (a wall at the
+    // target stops the overshoot). Overshoot is a fraction of the move.
+    measureStep(from, to, band = 0.02) {
+      const g = this.ghost({ x: from, v: 0 }), span = Math.abs(to - from), dir = Math.sign(to - from) || 1;
+      g.target = to;
+      const samples = [{ t: 0, x: from, v: 0 }];
+      let over = 0;
+      for (let i = 1; i <= 8 * BAKE_FPS; i++) {
+        g.step(1 / BAKE_FPS);
+        samples.push({ t: i / BAKE_FPS, x: g.x, v: g.v });
+        over = Math.max(over, (g.x - to) * dir);
+        if (g.settled()) break;
+      }
+      return { overshoot: span ? over / span : 0, settle: settleTime(samples, to, this.within(span, band)) };
     }
     jump(x) { this.interrupt(); this.x = x; this.v = 0; if (this.target != null) this.target = x; this.mark("jump"); this.onFrame && this.onFrame(this); return this; }
 
@@ -712,6 +773,8 @@
     const axis = o.axis || "x", scale = o.scale ?? 1, slop = o.slop ?? 4;
     let start = null;
     el.style.touchAction = axis === "x" ? "pan-y" : axis === "y" ? "pan-x" : "none";
+    // A drag that starts on text would otherwise select it.
+    el.style.userSelect = el.style.webkitUserSelect = "none";
     const angle = (e) => (Math.atan2(e.clientY - start.py, e.clientX - start.px) * 180) / Math.PI;
     el.addEventListener("pointerdown", (e) => {
       if (e.button !== 0) return;
@@ -805,7 +868,7 @@
           pts.push(i === 0 ? "0" : i === n ? "1" : `${r(y, 4)} ${r((100 * i) / n, 1)}%`);
         }
         const ms = Math.round(T * 1000);
-        return `/* A state change from rest: */\ntransition: transform ${ms}ms linear(${pts.join(", ")});\n/* ${ms}ms is the settle time of m ${r(p.mass)} · k ${r(p.stiffness, 1)} · c ${r(p.damping)}, not a choice. */\n\n/* A release or a flick: the runtime bakes the real path (its velocity, the walls) into keyframes the browser plays. */\n${HANDOFF}`;
+        return `/* A state change from rest: */\ntransition: transform ${ms}ms linear(${pts.join(", ")});\n/* m ${r(p.mass)} · k ${r(p.stiffness, 1)} · c ${r(p.damping)} on its own (no walls in CSS) settles within 2% in ${Math.round(m.settle * 1000)}ms; ${ms}ms runs 15% past that so the tail lands. Computed, not a choice. */\n\n/* A release or a flick: the runtime bakes the real path (its velocity, the walls) into keyframes the browser plays. */\n${HANDOFF}`;
       }
       default:
         return JSON.stringify({ mass: r(p.mass), stiffness: r(p.stiffness, 1), damping: r(p.damping, 2) });
@@ -846,5 +909,5 @@
     return { mass: r(p.mass, 2), stiffness: r(p.stiffness, 1), damping: r(p.damping, 2), freq: r(m.freq, 2), zeta: r(m.zeta, 2), overshoot: r(m.overshoot * 100, 1), settle: Math.round(m.settle * 1000) };
   }
 
-  global.Feel = { Body, Body2D, params, fromModal, modal, response, metrics, words, WORDS, magnets, points, friction, friction2d, gravity, drag, handoff, paint, exportCode, describe, loop, TAU, get reducedMotion() { return reducedMotion; } };
+  global.Feel = { Body, Body2D, params, fromModal, modal, response, metrics, settleTime, words, WORDS, magnets, points, friction, friction2d, gravity, drag, handoff, paint, exportCode, describe, loop, TAU, get reducedMotion() { return reducedMotion; } };
 })(typeof window !== "undefined" ? window : globalThis);

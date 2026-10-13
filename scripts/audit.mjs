@@ -22,6 +22,9 @@
 // 8. Bakes are faithful. The keyframes Feel.handoff gives the browser stay
 //    within their tolerance of the path, end exactly at rest, and the path is
 //    the one the JS loop would have stepped.
+// 9. One settle time. A tap's settle (±2% of the move, walls included) read off
+//    the trace, as the rig's readout does, matches the rig's Measures; with no
+//    walls both match Feel.metrics.
 // Exits 1 on any failure.
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join, resolve, extname } from "node:path";
@@ -222,6 +225,27 @@ console.log("\n8 · baked keyframes match the path the loop would step");
     const line = `${name.padEnd(7)} ${keys.length} keyframes for ${d.length} samples · ${Math.round(b.duration * 1000)} ms · within ${worst.toFixed(3)} of ${tol} · loop drift ${drift.toExponential(1)}`;
     if (worst <= tol + 1e-9 && drift < 1e-6 && atRest && keys.length < d.length / 4) pass(line);
     else fail(`${line}${atRest ? "" : " · doesn't end at rest"}`);
+  }
+}
+
+// ───────────────────────────────────────────── 9. one settle time
+console.log("\n9 · the rig's Measures and its readout give the same settle time");
+{
+  // A tap stepped the way the loop does: 1/60 s frames, recorded, snapped at rest.
+  const tap = (b, to) => {
+    b.to(to);
+    for (let i = 0; i < 600 && !b.settled(); i++) { b.step(1 / 60); b.record(); }
+    b.snap(); b.record();
+    return b.lastSettle();
+  };
+  for (const w of feelText ? [feelText] : ["heavy", "snappy", "bouncy"]) for (const walls of [true, false]) {
+    const p = Feel.words(w).params, make = () => new Feel.Body({ ...p, x: 0, ...(walls ? { min: 0, max: 64 } : {}) });
+    const m = make().measureStep(0, 64), read = tap(make(), 64);
+    const alone = Feel.metrics(p).settle;
+    // Without walls the component is the spring alone, so Measures must also match metrics.
+    const off = Math.max(Math.abs(read - m.settle), walls ? 0 : Math.abs(m.settle - alone));
+    const line = `${(w + (walls ? ", walls at 0 and 64" : ", no walls")).padEnd(28)} Measures ${Math.round(m.settle * 1000)} ms · ${(m.overshoot * 100).toFixed(1)}% · readout ${Math.round(read * 1000)} ms · spring alone ${Math.round(alone * 1000)} ms`;
+    if (read != null && off < 0.005) pass(line); else fail(`${line} · off by ${Math.round(off * 1000)} ms`);
   }
 }
 
