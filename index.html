@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Feel · interactions built on physics</title>
+<meta name="description" content="A Claude Code skill and runtime: describe how an interaction should feel, get a component driven by mass, stiffness and damping, plus a test rig. No hand-picked durations.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="runtime/feel.css">
+<style>
+  html, body { margin: 0; background: #0b0b0c; color: #ececea; font: 15px/1.6 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  main { max-width: 1240px; margin: 0 auto; padding: 64px 32px 120px; }
+  header { display: flex; justify-content: space-between; align-items: baseline; gap: 24px; flex-wrap: wrap; margin-bottom: 18px; }
+  header h1 { margin: 0; font-size: 15px; font-weight: 600; }
+  header h1 span { color: #7c7b78; font-weight: 400; }
+  header nav { display: flex; gap: 18px; font: 12px/1 ui-monospace, Menlo, monospace; }
+  header a { color: #ececea; text-decoration: none; opacity: .7; } header a:hover { opacity: 1; }
+  .lede { max-width: 680px; color: #a3a29d; margin: 0 0 48px; }
+  section { margin-bottom: 72px; }
+  section h2 { font: 500 12px/1.4 ui-monospace, Menlo, monospace; color: #7c7b78; margin: 0 0 14px; }
+
+  /* ───────── heavy toggle */
+  .ft-switch {
+    --ft-fill: 0;
+    all: unset; box-sizing: border-box; position: relative; display: block; cursor: grab;
+    width: 136px; height: 72px; padding: 6px; border-radius: 999px;
+    background: color-mix(in oklab, #2a2a2e calc((1 - var(--ft-fill)) * 100%), #ff8a3d);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+    touch-action: pan-y;
+  }
+  .ft-switch:active { cursor: grabbing; }
+  .ft-switch:focus-visible { outline: 2px solid #ff8a3d; outline-offset: 4px; }
+  .ft-thumb {
+    display: block; width: 60px; height: 60px; border-radius: 999px; transform-origin: 50% 50%;
+    background: radial-gradient(circle at 35% 30%, #ffffff, #d9d8d3 70%);
+    box-shadow: 0 2px 2px rgba(0, 0, 0, 0.3), 0 8px 18px -4px rgba(0, 0, 0, 0.55), inset 0 -2px 3px rgba(0, 0, 0, 0.12);
+    will-change: transform;
+  }
+
+  /* ───────── magnetic drawer */
+  .fd-phone {
+    position: relative; width: 248px; height: 420px; border-radius: 34px; overflow: hidden;
+    background: linear-gradient(180deg, #1b1b1f, #121214); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 20px 50px -20px rgba(0, 0, 0, 0.8);
+  }
+  .fd-phone::before { content: ""; position: absolute; inset: 0; background: rgba(0, 0, 0, calc(var(--dim, 0) * 0.5)); pointer-events: none; z-index: 1; }
+  .fd-app { padding: 46px 18px; display: grid; gap: 10px; }
+  .fd-app i { display: block; height: 12px; border-radius: 6px; background: rgba(255, 255, 255, 0.07); }
+  .fd-app i:nth-child(1) { width: 60%; height: 18px; background: rgba(255, 255, 255, 0.12); }
+  .fd-app i:nth-child(3) { width: 80%; } .fd-app i:nth-child(5) { width: 70%; }
+  .fd-sheet {
+    --fd-open: 0;
+    position: absolute; left: 0; right: 0; top: 50px; height: 420px; z-index: 2; border-radius: 22px 22px 0 0;
+    background: #232327; box-shadow: 0 -10px 30px rgba(0, 0, 0, calc(0.25 + var(--fd-open) * 0.35)), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    will-change: transform;
+  }
+  .fd-handle { display: grid; place-items: center; height: 34px; cursor: grab; touch-action: none; outline: none; }
+  .fd-handle:active { cursor: grabbing; }
+  .fd-handle::before { content: ""; width: 38px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.28); }
+  .fd-handle:focus-visible::before { background: #ff8a3d; }
+  .fd-rows { padding: 4px 16px; display: grid; gap: 10px; }
+  .fd-rows b { display: flex; align-items: center; gap: 10px; font: 500 13px/1 Inter, system-ui; color: #d8d7d2; }
+  .fd-rows b::before { content: ""; width: 30px; height: 30px; border-radius: 9px; background: rgba(255, 255, 255, 0.08); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Feel <span>· interactions built on physics. No hand-picked durations.</span></h1>
+    <nav><a href="https://github.com/diip3sh/feel">GitHub</a></nav>
+  </header>
+  <p class="lede">Say how it should feel. Every motion below comes from a body with mass on a spring with damping, in a force field. The dashed ghost is the exact solution; the orange line is what the component actually did.</p>
+
+  <section><h2>01 · a toggle that feels heavy</h2><div id="rig-toggle"></div></section>
+  <section><h2>02 · a drawer with a magnetic snap</h2><div id="rig-drawer"></div></section>
+</main>
+
+<div hidden>
+  <button class="ft-switch" id="toggle" role="switch" aria-checked="false" aria-label="Heavy toggle"><span class="ft-thumb"></span></button>
+  <div class="fd-phone" id="phone">
+    <div class="fd-app"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="fd-sheet" id="sheet">
+      <div class="fd-handle" data-handle aria-label="Drawer handle. Arrow keys move between stops."></div>
+      <div class="fd-rows"><b>Share</b><b>Duplicate</b><b>Move to folder</b><b>Archive</b><b>Delete</b></div>
+    </div>
+  </div>
+</div>
+
+<script src="runtime/feel.js"></script>
+<script src="runtime/rig.js"></script>
+<script src="components/heavy-toggle.js"></script>
+<script src="components/magnetic-drawer.js"></script>
+<script>
+  // Rigs need the components laid out first, so mount them into their benches before measuring.
+  const toggleEl = document.getElementById("toggle");
+  const phone = document.getElementById("phone");
+  const sheet = document.getElementById("sheet");
+
+  // 01 · heavy toggle
+  const hostT = document.getElementById("rig-toggle");
+  const stageT = document.createElement("div");
+  stageT.appendChild(toggleEl);
+  hostT.appendChild(stageT);
+  const t = Feel.heavyToggle(toggleEl, { feel: "heavy" });
+  window.toggleRig = Feel.rig(hostT, {
+    fig: 1, title: "Toggle · heavy", body: t.body, stage: stageT, travel: [0, t.travel], stops: [0, t.travel],
+    feel: "heavy", hint: "Drag the thumb · flick it · Space toggles",
+    actions: [
+      { key: "Space", label: "toggle", run: () => t.toggle() },
+      { key: "F", label: "flick", run: () => t.flick(t.checked ? -900 : 900) },
+      { key: "H", label: "half & let go", run: () => { t.body.jump(t.travel * (t.checked ? 0.45 : 0.55)); t.body.release(); t.set(t.body.projected() > t.travel / 2); } },
+    ],
+  });
+
+  // 02 · magnetic drawer
+  const hostD = document.getElementById("rig-drawer");
+  const stageD = document.createElement("div");
+  stageD.appendChild(phone);
+  hostD.appendChild(stageD);
+  const stops = [0, 170, 330];
+  const d = Feel.magneticDrawer(sheet, { stops, feel: "magnetic", start: 330, onStop: () => {} });
+  const dim = () => phone.style.setProperty("--dim", getComputedStyle(sheet).getPropertyValue("--fd-open"));
+  const prev = d.body.onFrame; d.body.onFrame = (b) => { prev(b); dim(); };
+  window.drawerRig = Feel.rig(hostD, {
+    fig: 2, title: "Drawer · magnetic", body: d.body, stage: stageD, travel: [0, 330], stops,
+    feel: "magnetic", hint: "Drag the handle · flick between stops · tap to step",
+    actions: [
+      { key: "1", label: "open", run: () => d.go(0) },
+      { key: "2", label: "half", run: () => d.go(1) },
+      { key: "3", label: "peek", run: () => d.go(2) },
+      { key: "F", label: "flick up", run: () => d.body.kick(-1400) },
+    ],
+  });
+</script>
+</body>
+</html>
